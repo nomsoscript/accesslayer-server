@@ -47,8 +47,22 @@ export function safeIntParam(options: {
    return z
       .string()
       .optional()
-      .transform(raw => normalizeOptionalIntegerQueryParam(raw, defaultValue))
-      .refine(val => val !== null && !Number.isNaN(val) && val >= min && val <= max, {
+      .transform((raw, ctx) => {
+         const normalized = normalizeOptionalIntegerQueryParam(
+            raw,
+            defaultValue
+         );
+         if (normalized === null) {
+            ctx.addIssue({
+               code: z.ZodIssueCode.custom,
+               message: `${label} must be an integer between ${min} and ${max}`,
+            });
+            return z.NEVER;
+         }
+
+         return normalized;
+      })
+      .refine(val => !Number.isNaN(val) && val >= min && val <= max, {
          message: `${label} must be an integer between ${min} and ${max}`,
       });
 }
