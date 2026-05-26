@@ -5,6 +5,15 @@ import {
 } from './creator-profile.schemas';
 import { CREATOR_DETAIL_DEFAULT_SELECT } from '../../constants/creator-detail-include.constants';
 
+function buildCreatorDetailCacheMissContext(creatorId: string) {
+   return {
+      event: 'creator_detail_cache_miss',
+      creatorId,
+      lookupKeys: ['id', 'handle'],
+      source: 'creator-profile-service',
+   };
+}
+
 /**
  * Reads a creator profile from the database.
  *
@@ -21,6 +30,8 @@ export async function getCreatorProfile(
    });
 
    if (!profile) {
+      console.warn(buildCreatorDetailCacheMissContext(creatorId));
+
       // Fallback for placeholder behavior if profile not found
       return {
          creatorId,
