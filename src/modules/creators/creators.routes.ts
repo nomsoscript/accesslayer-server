@@ -4,8 +4,14 @@ import { cacheControl } from '../../middlewares/cache-control.middleware';
 import { CREATOR_PUBLIC_ROUTE_CACHE_PRESETS } from '../../constants/creator-public-cache.constants';
 import { CREATOR_PUBLIC_ROUTE_NAMES } from '../../constants/creator-public-routes.constants';
 import { createCreatorReadMetricsMiddleware } from '../../utils/creator-read-metrics.utils';
+import { normalizeTrailingSlash } from '../../middlewares/trailing-slash-normalizer.middleware';
 
 const creatorsRouter = Router();
+
+// Normalize trailing slashes for all creator routes so that, e.g.,
+// GET /api/v1/creators/ reaches the same handler as GET /api/v1/creators.
+// Scoped to this router to avoid side-effects on other route groups.
+creatorsRouter.use(normalizeTrailingSlash);
 
 /**
  * GET /api/v1/creators
