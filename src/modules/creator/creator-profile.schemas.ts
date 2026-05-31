@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { withCreatorSlugEmptyStringNormalization } from './creator-slug-input.utils';
 import { normalizeSocialLinkUrl } from './creator-social-link-url.utils';
+import { sanitizeBio } from './creator-bio-sanitize.utils';
 
 /**
  * Shared creator profile identifier schema for route params.
@@ -67,6 +68,7 @@ export const UpsertCreatorProfileBodySchema = z.object({
       .string()
       .trim()
       .max(1000, 'Bio must be at most 1000 characters')
+      .transform(sanitizeBio)
       .optional(),
    avatarUrl: z
       .string()
