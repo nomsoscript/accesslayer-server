@@ -6,13 +6,14 @@ import chalk from 'chalk';
 import { z } from 'zod';
 import { ErrorCode, ErrorCodeType } from '../constants/error.constants';
 import { logger } from '../utils/logger.utils';
+import { RpcTimeoutError } from '../utils/rpc-timeout.utils';
 import { mapUnknownRouteError } from '../utils/route-error.utils';
 
 export class ApiError extends Error {
    statusCode: number;
    isOperational: boolean;
    errorCode?: ErrorCodeType;
- 
+
    constructor(
       statusCode: number,
       message: string,
@@ -48,6 +49,17 @@ export const temporarilyDisabled = (
    next(error);
 };
 
+const isCreatorListTimeout = (
+   err: unknown,
+   req: Request
+): err is RpcTimeoutError => {
+   return (
+      err instanceof RpcTimeoutError &&
+      req.method === 'GET' &&
+      req.path === '/api/v1/creators'
+   );
+};
+
 // Improved global error handling middleware
 export const errorHandler: ErrorRequestHandler = (
    err: any,
@@ -59,6 +71,17 @@ export const errorHandler: ErrorRequestHandler = (
    console.error('🚨 Error caught by global handler:');
    console.error('URL:', req.method, req.originalUrl);
    console.error('Error:', err);
+
+   if (isCreatorListTimeout(err, req)) {
+      logger.warn({
+         msg: 'Creator list request timed out',
+         requestId: req.requestId,
+         route: `${req.method} ${req.originalUrl}`,
+         queryParams: req.query,
+         elapsedMs: err.timeoutMs,
+         timeoutMs: err.timeoutMs,
+      });
+   }
 
    // Handle Zod validation errors
    if (err instanceof z.ZodError || err.name === 'ZodError') {
@@ -127,7 +150,11 @@ export const errorHandler: ErrorRequestHandler = (
    }
 
    // Handle oversized request payload (413)
-   if (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413) {
+   if (
+      err.type === 'entity.too.large' ||
+      err.status === 413 ||
+      err.statusCode === 413
+   ) {
       logger.warn({
          msg: 'Request payload too large',
          route: `${req.method} ${req.originalUrl}`,
